@@ -1,0 +1,670 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <title>Image → 3D | TRELLIS.2</title>
+
+  <!-- Google model-viewer -->
+  <script type="module"
+    src="https://unpkg.com/@google/model-viewer@4.1.0/dist/model-viewer.min.js"></script>
+
+  <style>
+    :root{
+      color-scheme:dark;
+      --bg:#070a0d;
+      --panel:#0d1318;
+      --panel2:#101820;
+      --line:#26323b;
+      --text:#e9f1f5;
+      --muted:#8ea1ac;
+      --accent:#2ed3d0;
+      --danger:#ff6b61;
+    }
+
+    *{box-sizing:border-box}
+
+    html,body{
+      margin:0;
+      min-height:100%;
+      background:var(--bg);
+      color:var(--text);
+      font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+    }
+
+    body{padding:24px 14px 48px}
+
+    main{
+      width:min(760px,100%);
+      margin:0 auto;
+    }
+
+    h1{
+      margin:0 0 8px;
+      font-size:clamp(28px,7vw,42px);
+      letter-spacing:-.03em;
+    }
+
+    .subtitle{
+      color:var(--muted);
+      line-height:1.5;
+      margin:0 0 20px;
+    }
+
+    .panel{
+      border:1px solid var(--line);
+      background:linear-gradient(180deg,var(--panel),#0a1014);
+      border-radius:18px;
+      padding:18px;
+      margin:14px 0;
+      box-shadow:0 12px 35px rgba(0,0,0,.2);
+    }
+
+    .drop{
+      border:1.5px dashed #3a4a55;
+      border-radius:14px;
+      min-height:180px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      text-align:center;
+      padding:20px;
+      cursor:pointer;
+      transition:.2s;
+      overflow:hidden;
+    }
+
+    .drop:hover,.drop.drag{
+      border-color:var(--accent);
+      background:#0d2023;
+    }
+
+    .drop input{display:none}
+
+    .drop-inner{
+      width:100%;
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      gap:8px;
+    }
+
+    .drop strong{font-size:18px}
+    .drop span{color:var(--muted);font-size:14px}
+
+    #preview{
+      display:none;
+      width:min(100%,480px);
+      max-height:430px;
+      object-fit:contain;
+      margin:16px auto 0;
+      border-radius:12px;
+      background:
+        linear-gradient(45deg,#ddd 25%,transparent 25%),
+        linear-gradient(-45deg,#ddd 25%,transparent 25%),
+        linear-gradient(45deg,transparent 75%,#ddd 75%),
+        linear-gradient(-45deg,transparent 75%,#ddd 75%);
+      background-size:20px 20px;
+      background-position:0 0,0 10px,10px -10px,-10px 0;
+    }
+
+    label{
+      display:block;
+      color:var(--muted);
+      font-size:14px;
+      margin-bottom:7px;
+    }
+
+    select{
+      width:100%;
+      appearance:auto;
+      background:#080c10;
+      color:var(--text);
+      border:1px solid var(--line);
+      border-radius:10px;
+      padding:13px 12px;
+      font-size:16px;
+      outline:none;
+    }
+
+    .grid{
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:12px;
+    }
+
+    @media(max-width:560px){
+      body{padding:14px 10px 35px}
+      .panel{padding:14px}
+      .grid{grid-template-columns:1fr}
+    }
+
+    button,.download{
+      width:100%;
+      border:0;
+      border-radius:12px;
+      padding:15px 16px;
+      font-size:17px;
+      font-weight:700;
+      cursor:pointer;
+      text-decoration:none;
+      display:block;
+      text-align:center;
+    }
+
+    .primary{
+      background:var(--accent);
+      color:#001111;
+    }
+
+    .primary:disabled{
+      opacity:.45;
+      cursor:not-allowed;
+    }
+
+    .secondary{
+      background:#111a20;
+      color:var(--text);
+      border:1px solid var(--line);
+      margin-top:10px;
+    }
+
+    .download{
+      background:#172329;
+      color:var(--text);
+      border:1px solid var(--line);
+      margin-top:12px;
+      display:none;
+    }
+
+    .status{
+      display:none;
+      white-space:pre-wrap;
+      font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
+      line-height:1.5;
+      border-radius:12px;
+      padding:13px;
+      margin-top:14px;
+      background:#091014;
+      border:1px solid var(--line);
+      color:#a9bbc4;
+      overflow:auto;
+    }
+
+    .status.error{
+      color:#ff8b83;
+      border-color:#6b2e2a;
+    }
+
+    .status.ok{
+      color:#72e3cf;
+      border-color:#24554e;
+    }
+
+    model-viewer{
+      width:100%;
+      height:min(70vh,620px);
+      min-height:360px;
+      display:none;
+      background:#080c10;
+      border:1px solid var(--line);
+      border-radius:14px;
+      overflow:hidden;
+    }
+
+    .small{
+      color:var(--muted);
+      font-size:13px;
+      line-height:1.5;
+      margin-top:12px;
+    }
+
+    .hidden{display:none!important}
+  </style>
+</head>
+
+<body>
+<main>
+  <h1>Image → 3D</h1>
+  <p class="subtitle">
+    Generate a textured 3D asset with Microsoft TRELLIS.2.
+    Transparent-background images work best.
+  </p>
+
+  <section class="panel">
+    <label>Input image</label>
+
+    <label class="drop" id="dropZone" for="fileInput">
+      <input id="fileInput" type="file" accept="image/png,image/jpeg,image/webp">
+      <div class="drop-inner">
+        <strong>Tap to upload an image</strong>
+        <span>PNG / JPG / WebP • transparent subjects work best</span>
+      </div>
+    </label>
+
+    <img id="preview" alt="Input preview">
+
+    <div class="small" id="fileName"></div>
+  </section>
+
+  <section class="panel">
+    <div class="grid">
+      <div>
+        <label for="resolution">Generation resolution</label>
+        <select id="resolution">
+          <option value="512">512 — faster</option>
+          <option value="1024" selected>1024 — recommended</option>
+          <option value="1536">1536 — highest quality</option>
+        </select>
+      </div>
+
+      <div>
+        <label for="textureSize">Texture size</label>
+        <select id="textureSize">
+          <option value="1024">1024</option>
+          <option value="2048" selected>2048 — recommended</option>
+          <option value="4096">4096 — highest</option>
+        </select>
+      </div>
+    </div>
+
+    <button class="primary" id="generate" disabled>Generate 3D model</button>
+    <button class="secondary" id="clear">Choose a different image</button>
+
+    <div class="status" id="status"></div>
+  </section>
+
+  <section class="panel">
+    <h2 style="margin-top:0">Generated GLB</h2>
+
+    <model-viewer
+      id="viewer"
+      camera-controls
+      auto-rotate
+      shadow-intensity="1"
+      exposure="1"
+      interaction-prompt="none"
+      alt="Generated 3D model">
+    </model-viewer>
+
+    <a id="download" class="download" download="trellis2-model.glb">
+      Download GLB
+    </a>
+
+    <p class="small">
+      Pipeline: image → <code>/image_to_3d</code> → model state →
+      <code>/extract_glb</code> → GLB.
+    </p>
+  </section>
+</main>
+
+<script type="module">
+  import { Client, handle_file } from "https://esm.sh/@gradio/client@2.3.1";
+
+  const SPACE = "microsoft/TRELLIS.2";
+
+  const fileInput = document.getElementById("fileInput");
+  const dropZone = document.getElementById("dropZone");
+  const preview = document.getElementById("preview");
+  const fileName = document.getElementById("fileName");
+  const generateBtn = document.getElementById("generate");
+  const clearBtn = document.getElementById("clear");
+  const status = document.getElementById("status");
+  const resolutionEl = document.getElementById("resolution");
+  const textureSizeEl = document.getElementById("textureSize");
+  const viewer = document.getElementById("viewer");
+  const download = document.getElementById("download");
+
+  let selectedFile = null;
+  let client = null;
+  let generatedState = null;
+  let objectUrl = null;
+
+  function showStatus(message, type = "") {
+    status.style.display = "block";
+    status.className = "status" + (type ? " " + type : "");
+    status.textContent = message;
+  }
+
+  function clearStatus() {
+    status.style.display = "none";
+    status.textContent = "";
+    status.className = "status";
+  }
+
+  function setSelectedFile(file) {
+    if (!file || !file.type.startsWith("image/")) {
+      showStatus("Please choose a PNG, JPG, or WebP image.", "error");
+      return;
+    }
+
+    selectedFile = file;
+    fileName.textContent = file.name;
+    generateBtn.disabled = false;
+    clearStatus();
+
+    if (preview.src) URL.revokeObjectURL(preview.src);
+    preview.src = URL.createObjectURL(file);
+    preview.style.display = "block";
+
+    viewer.style.display = "none";
+    download.style.display = "none";
+    generatedState = null;
+  }
+
+  fileInput.addEventListener("change", () => {
+    setSelectedFile(fileInput.files?.[0]);
+  });
+
+  ["dragenter","dragover"].forEach(eventName => {
+    dropZone.addEventListener(eventName, e => {
+      e.preventDefault();
+      dropZone.classList.add("drag");
+    });
+  });
+
+  ["dragleave","drop"].forEach(eventName => {
+    dropZone.addEventListener(eventName, e => {
+      e.preventDefault();
+      dropZone.classList.remove("drag");
+    });
+  });
+
+  dropZone.addEventListener("drop", e => {
+    setSelectedFile(e.dataTransfer.files?.[0]);
+  });
+
+  clearBtn.addEventListener("click", () => {
+    selectedFile = null;
+    generatedState = null;
+    fileInput.value = "";
+    preview.removeAttribute("src");
+    preview.style.display = "none";
+    fileName.textContent = "";
+    generateBtn.disabled = true;
+    viewer.style.display = "none";
+    viewer.removeAttribute("src");
+    download.style.display = "none";
+    download.removeAttribute("href");
+    clearStatus();
+    window.scrollTo({top:0, behavior:"smooth"});
+  });
+
+  async function getClient() {
+    if (!client) {
+      showStatus("Connecting to Microsoft TRELLIS.2…");
+      client = await Client.connect(SPACE);
+    }
+    return client;
+  }
+
+  /*
+   * IMPORTANT:
+   * TRELLIS.2's /image_to_3d function is defined with 15 positional
+   * inputs before its request/progress arguments:
+   *
+   * image,
+   * seed,
+   * resolution,
+   * 4 sparse-structure sampler values,
+   * 4 shape-slat sampler values,
+   * 4 texture-slat sampler values.
+   *
+   * Do NOT send { state: ... } to this endpoint.
+   * The returned state is only used as the FIRST positional input
+   * to /extract_glb.
+   */
+
+  /*
+   * TRELLIS.2 has two different kinds of calls:
+   *
+   * 1. /image_to_3d is a long-running queued generation job, so we
+   *    use submit() and consume its final data event.
+   *
+   * 2. /extract_glb is also long-running, but returning its two file
+   *    outputs through submit() is unreliable with some Gradio client
+   *    versions. We therefore call it with predict(), which waits for
+   *    the completed prediction and returns result.data directly.
+   */
+  async function runGenerationEndpoint(payload, progressLabel) {
+    const c = await getClient();
+
+    showStatus(progressLabel);
+
+    const job = c.submit("/image_to_3d", payload);
+    let latestData = null;
+    let lastStatus = "";
+
+    for await (const message of job) {
+      if (message.type === "status") {
+        if (message.stage === "error") {
+          throw new Error(
+            message.message || "TRELLIS.2 /image_to_3d request failed."
+          );
+        }
+
+        if (message.stage === "pending") {
+          lastStatus =
+            message.position != null
+              ? `Queue position: ${message.position}`
+              : "Waiting for TRELLIS.2…";
+          showStatus(`${progressLabel}\n${lastStatus}`);
+        } else if (message.stage === "generating") {
+          showStatus(
+            `${progressLabel}\n${message.message || "Processing…"}`
+          );
+        } else if (message.stage === "complete") {
+          showStatus(`${progressLabel}\nGeneration complete.`);
+        }
+      }
+
+      if (message.type === "data") {
+        latestData = message.data;
+      }
+    }
+
+    if (!latestData) {
+      throw new Error(
+        "TRELLIS.2 /image_to_3d completed without returning model state."
+      );
+    }
+
+    return latestData;
+  }
+
+  async function extractGLBEndpoint(payload, progressLabel) {
+    const c = await getClient();
+
+    showStatus(
+      `${progressLabel}\nThis step can take 30–60+ seconds on the public GPU.`
+    );
+
+    /*
+     * Use predict() here rather than submit().
+     *
+     * The official TRELLIS.2 function is:
+     * extract_glb(state, decimation_target, texture_size)
+     *
+     * The current Gradio API supports named parameters, so sending
+     * state explicitly here avoids the old "state is not a valid
+     * keyword argument" problem that occurred when state was sent
+     * to the WRONG endpoint.
+     */
+    const result = await c.predict("/extract_glb", payload);
+
+    if (!result || !Array.isArray(result.data) || result.data.length === 0) {
+      throw new Error(
+        "TRELLIS.2 /extract_glb completed but returned an empty response."
+      );
+    }
+
+    return result.data;
+  }
+
+  function getFileUrl(fileData) {
+    if (!fileData) return null;
+
+    if (typeof fileData === "string") {
+      if (/^https?:\/\//i.test(fileData)) return fileData;
+      if (fileData.startsWith("/")) {
+        return "https://microsoft-trellis-2.hf.space" + fileData;
+      }
+      return fileData;
+    }
+
+    if (fileData.url) {
+      if (/^https?:\/\//i.test(fileData.url)) return fileData.url;
+      if (fileData.url.startsWith("/")) {
+        return "https://microsoft-trellis-2.hf.space" + fileData.url;
+      }
+    }
+
+    if (fileData.path && /^https?:\/\//i.test(fileData.path)) {
+      return fileData.path;
+    }
+
+    return null;
+  }
+
+  generateBtn.addEventListener("click", async () => {
+    if (!selectedFile) return;
+
+    generateBtn.disabled = true;
+    clearStatus();
+    viewer.style.display = "none";
+    viewer.removeAttribute("src");
+    download.style.display = "none";
+    download.removeAttribute("href");
+    generatedState = null;
+
+    try {
+      /*
+       * handle_file() is required for browser File objects.
+       * It uploads the local file and creates the FileData structure
+       * expected by the Gradio server.
+       */
+      const imageInput = handle_file(selectedFile);
+
+      const resolution = resolutionEl.value;
+
+      /*
+       * These are the exact default sampler values exposed by the
+       * official TRELLIS.2 app.py:
+       *
+       * Sparse structure:
+       *   guidance_strength = 7.5
+       *   guidance_rescale  = 0.7
+       *   sampling_steps    = 12
+       *   rescale_t         = 5.0
+       *
+       * Shape:
+       *   guidance_strength = 7.5
+       *   guidance_rescale  = 0.5
+       *   sampling_steps    = 12
+       *   rescale_t         = 3.0
+       *
+       * Material:
+       *   guidance_strength = 1.0
+       *   guidance_rescale  = 0.0
+       *   sampling_steps    = 12
+       *   rescale_t         = 3.0
+       */
+
+      const imageTo3DPayload = {
+        image: imageInput,
+        seed: 0,
+        resolution: resolution,
+
+        ss_guidance_strength: 7.5,
+        ss_guidance_rescale: 0.7,
+        ss_sampling_steps: 12,
+        ss_rescale_t: 5.0,
+
+        shape_slat_guidance_strength: 7.5,
+        shape_slat_guidance_rescale: 0.5,
+        shape_slat_sampling_steps: 12,
+        shape_slat_rescale_t: 3.0,
+
+        tex_slat_guidance_strength: 1.0,
+        tex_slat_guidance_rescale: 0.0,
+        tex_slat_sampling_steps: 12,
+        tex_slat_rescale_t: 3.0
+      };
+
+      const generationData = await runGenerationEndpoint(
+        imageTo3DPayload,
+        "Generating 3D model with TRELLIS.2…"
+      );
+
+      /*
+       * Official TRELLIS.2 app.py returns:
+       *   output 0 = gr.State containing the packed latent state
+       *   output 1 = HTML preview
+       *
+       * The state is NOT sent as a keyword named "state".
+       */
+      generatedState = generationData[0];
+
+      if (!generatedState) {
+        throw new Error("TRELLIS.2 generated no model state.");
+      }
+
+      showStatus("3D generation complete.\nExtracting GLB…");
+
+      /*
+       * Official extract_glb(state, decimation_target, texture_size)
+       * expects these three values in this positional order.
+       */
+      const extractPayload = {
+        state: generatedState,
+        decimation_target: 500000,
+        texture_size: Number(textureSizeEl.value)
+      };
+
+      const extractData = await extractGLBEndpoint(
+        extractPayload,
+        "Extracting GLB…"
+      );
+
+      const glbData = extractData[0];
+      const glbUrl = getFileUrl(glbData);
+
+      if (!glbUrl) {
+        throw new Error(
+          "TRELLIS.2 returned the GLB, but no downloadable URL was exposed by the API."
+        );
+      }
+
+      viewer.src = glbUrl;
+      viewer.style.display = "block";
+
+      download.href = glbUrl;
+      download.download = "trellis2-model.glb";
+      download.style.display = "block";
+
+      showStatus(
+        "Success.\n\nThe GLB was generated and loaded into the 3D viewer.",
+        "ok"
+      );
+
+      viewer.scrollIntoView({behavior:"smooth", block:"start"});
+
+    } catch (error) {
+      console.error(error);
+
+      let message = error?.message || String(error);
+
+      if (message.includes("state") && message.includes("keyword")) {
+        message +=
+          "\n\nThis is the old keyword-payload error. " +
+          "The current file uses positional arrays for both TRELLIS.2 endpoints.";
+      }
+
+      showStatus("Generation failed:\n" + message, "error");
+    } finally {
+      generateBtn.disabled = !selectedFile;
+    }
+  });
+</script>
+</body>
+</html>
