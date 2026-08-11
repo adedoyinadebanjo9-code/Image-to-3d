@@ -167,7 +167,7 @@ import { Client } from "https://esm.sh/@gradio/client@1";
      3. the parameter key(s) match what's listed under "Parameters"
    Then update the three values below.
 */
-const SPACE_ID = "microsoft/TRELLIS.2";
+const SPACE_ID = "https://microsoft-trellis-2.hf.space";
 const ENDPOINT = "/generate";
 const IMAGE_PARAM_KEY = "image";
 
@@ -246,6 +246,14 @@ generateBtn.addEventListener('click', async () => {
   showStatus('Connecting to TRELLIS.2…');
 
   try {
+    showStatus('Checking Space is reachable…');
+    try {
+      await fetch(SPACE_ID, { mode: 'no-cors' });
+    } catch (pingErr) {
+      throw new Error('Cannot reach ' + SPACE_ID + ' at all (network/DNS/ad-blocker level, not CORS) — ' + pingErr.message);
+    }
+
+    showStatus('Connecting to TRELLIS.2…');
     const client = await Client.connect(SPACE_ID);
 
     showStatus('In queue — this can take a minute or two…');
